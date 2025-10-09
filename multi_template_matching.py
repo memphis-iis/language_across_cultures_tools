@@ -5,13 +5,12 @@ from MTM import matchTemplates, drawBoxesOnRGB
 import matplotlib.pyplot as plt
 
 listTemplate = []
-image_folder = "./images/templates"
-for filename in os.listdir(image_folder):
-    template_img = cv2.imread(os.path.join(image_folder, filename))
-    template_img = cv2.cvtColor(template_img, cv2.COLOR_BGR2GRAY)
-    listTemplate.append((filename.split('.')[0], template_img))
+image_folder = "./images/voynichese"
+template_img = cv2.imread(os.path.join(image_folder, "f66r.jpg"))
+template_img = cv2.cvtColor(template_img, cv2.COLOR_BGR2GRAY)
+listTemplate.append(("f66r", template_img))
 
-input_img = cv2.imread(os.path.join("./images", "base.png"))
+input_img = cv2.imread(os.path.join("./images/voynichese", "119.jpg"))
 input_img = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
 hits = matchTemplates(listTemplate,
                       input_img,

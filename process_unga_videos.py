@@ -35,47 +35,39 @@ def is_completed(input_folder, filename, function):
 
 
 #extract_frames
-def extract_frames(input_folder, output_folder):
-    #check if another host is processing this file or if this is completed
-    if not os.path.isdir(output_folder):
-        os.makedirs(output_folder)
-    for filename in os.listdir(input_folder):
-        if is_processing(input_folder, filename): 
-            print(f'{filename} already processed')
-            continue
-        if filename.endswith('.wmv') and not filename.startswith('#'):
-            print(f'Processing {filename}')
-            #lock the file
-            write_to_processing_csv(input_folder, filename, 'extract_frames', 'processing')
-            # Get the full path of the input file
-            input_path = os.path.join(input_folder, filename)
-            print(f'Extracting frames from {filename}')
-            # Load the video file
-            video = cv2.VideoCapture(input_path)
-            # Get the frames
-            frame_number = 0
-            while True:
-                success, frame = video.read()
-                if not success:
-                    break
-                #frame path should be the output folder with a subfolder of the filename, with a file frame_number.jpg
-                #create the subfolder if it does not exist
-                frame_folder = os.path.join(output_folder, filename.split('.')[0])
-                if not os.path.isdir(frame_folder):
-                    os.makedirs(frame_folder)
-                frame_path = os.path.join(frame_folder, f'{frame_number}.jpg')
-                cv2.imwrite(frame_path, frame)
-                frame_number += 1
-            video.release()
-            #unlock the file and mark as completed
-            write_to_processing_csv(input_folder, filename, 'extract_frames', 'completed')
-            print(f'Frames extracted from {filename}')
+def extract_frames(file, output_folder):
+    #check if the file is being processed
+    if is_processing(output_folder, file):
+        print(f'{file} already being processed')
+        return
+    #check if the file has been processed
+    if is_completed(output_folder, file, 'extract_frames'):
+        print(f'{file} already processed')
+        return
+    #lock the file
+    write_to_processing_csv(output_folder, file, 'extract_frames', 'processing')
+    # Get the full path of the input file
+    input_path = os.path.join(file)
+    print(f'Extracting frames from {file}')
+    # Load the video file
+    video = cv2.VideoCapture(input_path)
+    # Get the number of frames
+    frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    # Extract the frames
+    for i in range(frame_count):
+        # Read the frame
+        success, frame = video.read()
+        if not success:
+            print(f'Error: Frame {i} not read')
+            break
+        # Save the frame
+        frame_path = os.path.join(output_folder, f'{file}_{i}.jpg')
+        print(f'Writing frame {i} to {frame_path}')
+        cv2.imwrite(frame_path, frame)
+    #unlock the file and mark as completed
+    write_to_processing_csv(output_folder, file, 'extract_frames', 'completed')
+    print(f'Frames extracted from {file}')
 
-def multithread_extract_frames(input_folder, output_folder, workers=4):
-    print('Multithreading extract_frames')
-    #use concurrent futures to multithread the extraction of frames
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-        executor.map(extract_frames, input_folder, output_folder)
 
 
 def remove_background_of_files(input_folder, output_folder):
@@ -144,8 +136,17 @@ def main_function(input_folder, output_folder_wmv):
     #we prioritize the extraction of frames first, then removing the background, then combining the frames into a WMV file
     #we will use multithreading to speed up the process
     #if no frames are available for extraction, we go to the next step
-    print('Extracting frames')
-    extract_frames(input_folder, output_folder_wmv)
+    
+    #for each file in the input folder, extract the frames
+    wmvs = [f for f in os.listdir(input_folder) if f.endswith('.wmv') and not f.startswith('#')]
+
+    paths = [os.path.join(input_folder, f) for f in wmvs]
+    #use concurrent futures to multithread the extraction of frames
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        executor.map(extract_frames, paths, input_folder)
+
+
+
     
 # main to set arguments
 if __name__ == '__main__':

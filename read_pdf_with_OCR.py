@@ -53,5 +53,5 @@ def main(folder_path):
                         print(f"No suitable paragraphs found in {pdf_path}")
 
 if __name__ == "__main__":
-    folder_path = "/media/rusty/Data2/UNGA/UNGA_78/pdf"
+    folder_path = "./pdf_statements"
     main(folder_path)
